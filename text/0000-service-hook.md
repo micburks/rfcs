@@ -39,9 +39,9 @@ The `useService` hook would get a function from Context to lookup the registered
 // fusion-react
 const ServiceContext = React.createContext();
 
-export function useService(token) {
-  const getService = useContext(ServiceContext);
-  const provides = getService(token);
+export function useService(token: Token<any>): any {
+  const getService: (Token<any>) => any = useContext(ServiceContext);
+  const provides: any = getService(token);
   return provides;
 }
 ```
@@ -55,21 +55,25 @@ The naive approach is to simply provide access to the `getServices` method on th
 export default class App extends FusionApp {
   constructor() {
     // ...
-    this.register(
-      createPlugin({
-        middleware() {
-          return (ctx, next) => {
-            ctx.element = ctx.element && (
-              <ServiceContext.Provider value={app.getService}>
-                {ctx.element}
-              </ServiceContext.Provider>
-            );
-            return next();
-          };
-        }
-      })
-    );
+    this.register(ServiceProviderPlugin(this));
   }
+}
+
+function ServiceProviderPlugin(
+  app: FusionApp
+): FusionPlugin<null, ServiceProviderServiceLOL> {
+  return createPlugin({
+    middleware() {
+      return (ctx: Context, next: () => Promise<*>) => {
+        ctx.element = ctx.element && (
+          <ServiceContext.Provider value={app.getService}>
+            {ctx.element}
+          </ServiceContext.Provider>
+        );
+        return next();
+      };
+    }
+  });
 }
 ```
 
