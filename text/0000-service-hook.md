@@ -83,7 +83,7 @@ Alternatively, the resolved plugins will need to be made available to the Contex
 
 # Drawbacks
 
-The simple approach is possible to do in user space (`app.js`).
+The simple approach above is possible to implement in a Fusion application using a plugin, such as in `app.js`. There is no technical constraint for this particular solution to be in the fusion-react package. That being said, there are other reasons for the solution to not exist at the consumer level.
 
 This change will introduce a divide between a new way and the old way of using HOCs for services. The tech debt already exists, but this work needs to be closely followed with migration/codemods to upgrade existing '-react' packages.
 
