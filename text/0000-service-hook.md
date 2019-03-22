@@ -61,7 +61,7 @@ export default class App extends FusionApp {
 
 function ServiceProviderPlugin(
   app: FusionApp
-): FusionPlugin<null, ServiceProviderServiceLOL> {
+): FusionPlugin<null, ServiceProviderService> {
   return createPlugin({
     middleware() {
       return (ctx: Context, next: () => Promise<*>) => {
