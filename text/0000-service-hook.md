@@ -48,7 +48,7 @@ export function useService(token: Token<any>): any {
 
 The Context Provider would supply a function that can get the registered service.
 
-The naive approach is to simply provide access to the `getServices` method on the app instance. This could be done with a very simple plugin.
+The most obvious approach is to simply provide access to the `getService` method on the app instance. This could be done with a very simple plugin.
 
 ```javascript
 // fusion-react
@@ -61,7 +61,7 @@ export default class App extends FusionApp {
 
 function ServiceProviderPlugin(
   app: FusionApp
-): FusionPlugin<null, ServiceProviderService> {
+): FusionPlugin<null, ServiceProviderServiceType> {
   return createPlugin({
     middleware() {
       return (ctx: Context, next: () => Promise<*>) => {
@@ -77,9 +77,7 @@ function ServiceProviderPlugin(
 }
 ```
 
-Though I can find examples of its usage, `getServices` is an undocumented method so it's possibly intended to be private or unstable.
-
-Alternatively, the resolved plugins will need to be made available to the Context Provider in some other way. Admittedly, I would need more details here for an in-depth alternate solution. Since plugins can be overwritten, we need to be sure the DI system has resolved all plugins.
+`getService` provides access to the resolved service, which is exactly what we want. Though I can find examples of its usage, `getService` is an undocumented method so it's possibly intended to be private.
 
 # Drawbacks
 
@@ -99,6 +97,8 @@ Fusion devs can opt-in to the new approach, granted they are using React v16.8. 
 
 # How we teach this
 
-`useService(token)` - use the service associated with this token
+`useService(token)`
 
-The current concepts in fusion are actually more straightforward with hooks. React developers are getting comfortable with hooks and the concepts are well-documented.
+> *use* the *service* associated with this *token*
+
+The current concepts in Fusion are actually more straightforward with hooks. React developers are getting comfortable with hooks and the concepts are well-documented.
