@@ -17,7 +17,7 @@ import {ExampleToken} from 'fusion-tokens';
 import {useService} from 'fusion-react';
 
 export default function Example() {
-  const service = useService(ExampleToken);
+  const service = useService<typeof ExampleToken>(ExampleToken);
 
   return (
     <button onClick={service}>Invoke service</button>
@@ -37,11 +37,15 @@ The `useService` hook would get a function from Context to lookup the registered
 
 ```javascript
 // fusion-react
-const ServiceContext = React.createContext();
+type ServiceContextType<T> = {
+  (): $Call<ExtractReturnType, T>,
+};
 
-export function useService(token: Token<any>): any {
-  const getService: (Token<any>) => any = useContext(ServiceContext);
-  const provides: any = getService(token);
+const ServiceContext = React.createContext<ServiceContextType<any>>(() => {});
+
+export function useService<T: Token<any>>(token: T): ServiceContextType<T> {
+  const getService: T => ServiceContextType<T> = useContext(ServiceContext);
+  const provides = getService(token);
   return provides;
 }
 ```
@@ -61,10 +65,10 @@ export default class App extends FusionApp {
 
 function ServiceProviderPlugin(
   app: FusionApp
-): FusionPlugin<null, ServiceProviderServiceType> {
+): FusionPlugin<void, void> {
   return createPlugin({
-    middleware() {
-      return (ctx: Context, next: () => Promise<*>) => {
+    middleware(): Middleware {
+      return (ctx, next) => {
         ctx.element = ctx.element && (
           <ServiceContext.Provider value={app.getService}>
             {ctx.element}
