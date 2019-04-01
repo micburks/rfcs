@@ -33,69 +33,40 @@ This work will not include refactoring existing plugins to hooks but will allow 
 
 # Detailed design
 
+### useService
+
 The `useService` hook would get a function from Context to lookup the registered service for the supplied token.
 
 ```javascript
 // fusion-react
-type ServiceContextType<T> = {
-  (): $Call<ExtractReturnType, T>,
-};
+const ServiceContext = React.createContext<any>(() => {});
 
-const ServiceContext = React.createContext<ServiceContextType<any>>(() => {});
-
-export function useService<T: Token<any>>(token: T): ServiceContextType<T> {
-  const getService: T => ServiceContextType<T> = useContext(ServiceContext);
+export function useService<TService>(token: Token<TService>): TService {
+  const getService: (Token<TService>) => TService = React.useContext(
+    ServiceContext
+  );
   const provides = getService(token);
   return provides;
 }
 ```
-
-The Context Provider would supply a function that can get the registered service.
-
-The most obvious approach is to simply provide access to the `getService` method on the app instance. This could be done with a very simple plugin.
-
-```javascript
-// fusion-react
-export default class App extends FusionApp {
-  constructor() {
-    // ...
-    this.register(ServiceProviderPlugin(this));
-  }
-}
-
-function ServiceProviderPlugin(
-  app: FusionApp
-): FusionPlugin<void, void> {
-  return createPlugin({
-    middleware(): Middleware {
-      return (ctx, next) => {
-        ctx.element = ctx.element && (
-          <ServiceContext.Provider value={app.getService}>
-            {ctx.element}
-          </ServiceContext.Provider>
-        );
-        return next();
-      };
-    }
-  });
-}
-```
-
-`getService` provides access to the resolved service, which is exactly what we want. Though I can find examples of its usage, `getService` is an undocumented method so it's possibly intended to be private.
+### Context.Consumer
 
 In order to provide a hook-less approach for applications that either don't use hooks or will not migrate from the HOC pattern that uses legacy Context API, we will expose the ServiceContext for direct usage. In addition, we can also expose a simply React component that uses render props to provide a similar functionality to the `useService` hook.
 
 ```javascript
 // fusion-react
-type Props<T> = {
-  token: T,
-  children: (ServiceContextType<T>) => Element<any>,
+type Props<TService> = {
+  token: Token<TService>,
+  children: TService => Element<any>,
 };
 
-export function ServiceConsumer<T>({token, children}: Props<T>) {
+export function ServiceConsumer<TService>({
+  token,
+  children,
+}: Props<TService>) {
   return (
     <ServiceContext.Consumer>
-      {(getService: T => ServiceContextType<T>) => {
+      {(getService: (Token<TService>) => TService) => {
         const provides = getService(token);
         return children(provides);
       }}
@@ -107,16 +78,77 @@ export {ServiceContext};
 
 // components/Example.js
 export default function Example() {
-  return ServiceConsumer<typeof ExampleToken>({
-    token: ExampleToken,
-    children(service) {
-      return (
+  return (
+    <ServiceConsumer token={ExampleToken}>
+      {service => (
         <button onClick={service}>Invoke service</button>
-      );
+      )}
+    </ServiceConsumer>
+  );
+}
+```
+
+### Fusion Context
+
+Many plugins depend on the Fusion middleware context. Therefore in addition to getting a service from a hook, we need to allow access to context in a similar fashion. This is done simply enough with Context.
+
+```javascript
+// fusion-react
+export const FusionContext = React.createContext<any>({});
+
+// components/Example.js
+import {useContext} from 'react';
+import {FusionContext} from 'fusion-react';
+
+export default function Example() {
+  // ...
+  const ctx = useContext(FusionContext)
+  // ...
+}
+```
+
+### Context.Provider
+
+The ServiceContext Provider would supply a function that can get the registered service.
+
+The most obvious approach is to simply provide access to the `getService` method on the app instance. This could be done with a very simple plugin.
+
+```javascript
+// fusion-react
+export default class App extends FusionApp {
+  constructor() {
+    // ...
+    this.register(serviceContextPlugin(this));
+  }
+}
+
+function serviceContextPlugin(
+  app: FusionApp
+): FusionPlugin<void, void> {
+  return createPlugin({
+    middleware(): Middleware {
+      return (ctx, next) => {
+        ctx.element = ctx.element && (
+          <FusionContext.Provider value={ctx}>
+            <ServiceContext.Provider value={app.getService}>
+              {ctx.element}
+            </ServiceContext.Provider>
+          </FusionContext.Provider>
+        );
+        return next();
+      };
     }
   });
 }
 ```
+
+`getService` provides access to the resolved service, which is exactly what we want. Though I can find examples of its usage, `getService` is an undocumented method so it's possibly intended to be private.
+
+FusionContext gives access to the Fusion middleware context object.
+
+### Error handling
+
+Any access to `app.getService` (through `useService` or `ServiceConsumer`) will throw an exception in cases where a token hasn't been registered, the plugin has no `provides`, or the plugin `provides` returns `undefined`. Throwing in these cases shouldn't be detrimental to developer experience since the entire point of Context is to get access to an expected functionality. We have no current method of detecting the difference between these 3 cases. Should we need to support unregisted services, such as for optional plugins, we could potentially add an `app.hasService` method on the base app in `fusion-core` to see if a plugin has been registered.
 
 # Drawbacks
 
