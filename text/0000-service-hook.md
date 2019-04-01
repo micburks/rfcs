@@ -83,6 +83,41 @@ function ServiceProviderPlugin(
 
 `getService` provides access to the resolved service, which is exactly what we want. Though I can find examples of its usage, `getService` is an undocumented method so it's possibly intended to be private.
 
+In order to provide a hook-less approach for applications that either don't use hooks or will not migrate from the HOC pattern that uses legacy Context API, we will expose the ServiceContext for direct usage. In addition, we can also expose a simply React component that uses render props to provide a similar functionality to the `useService` hook.
+
+```javascript
+// fusion-react
+type Props<T> = {
+  token: T,
+  children: (ServiceContextType<T>) => Element<any>,
+};
+
+export function ServiceConsumer<T>({token, children}: Props<T>) {
+  return (
+    <ServiceContext.Consumer>
+      {(getService: T => ServiceContextType<T>) => {
+        const provides = getService(token);
+        return children(provides);
+      }}
+    </ServiceContext.Consumer>
+  );
+}
+
+export {ServiceContext};
+
+// components/Example.js
+export default function Example() {
+  return ServiceConsumer<typeof ExampleToken>({
+    token: ExampleToken,
+    children(service) {
+      return (
+        <button onClick={service}>Invoke service</button>
+      );
+    }
+  });
+}
+```
+
 # Drawbacks
 
 The simple approach above is possible to implement in a Fusion application using a plugin, such as in `app.js`. There is no technical constraint for this particular solution to be in the fusion-react package. That being said, there are other reasons for the solution to not exist at the consumer level.
