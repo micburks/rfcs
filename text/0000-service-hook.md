@@ -148,7 +148,18 @@ FusionContext gives access to the Fusion middleware context object.
 
 ### Error handling
 
-Any access to `app.getService` (through `useService` or `ServiceConsumer`) will throw an exception in cases where a token hasn't been registered, the plugin has no `provides`, or the plugin `provides` returns `undefined`. Throwing in these cases shouldn't be detrimental to developer experience since the entire point of Context is to get access to an expected functionality. We have no current method of detecting the difference between these 3 cases. Should we need to support unregisted services, such as for optional plugins, we could potentially add an `app.hasService` method on the base app in `fusion-core` to see if a plugin has been registered.
+Using `useService` or `ServiceConsumer` will throw an exception in cases where a token hasn't been registered, the plugin has no `provides`, or the plugin `provides` returns `undefined`. Hooks need to be used unconditionally, so these exceptions will break the render and can only be caught with an ErrorBoundary around the component. Using an optional token will suppress the exception that would be thrown in these cases. This provides users a way to use a service through a hook conditionally, which is otherwise unallowed in hooks semantics.
+
+```js
+const service = useService(ExampleToken); // throws if not registered
+
+const optionalService = useService(ExampleToken.optional);
+if (optionalService) {
+  // token was registered
+} else {
+  // was not registered, no error thrown
+}
+```
 
 # Drawbacks
 
